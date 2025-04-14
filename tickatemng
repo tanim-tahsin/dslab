@@ -1,0 +1,227 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_SEATS 50
+#define MAX_NAME_LENGTH 50
+
+// Structure for a seat
+typedef struct {
+    int seatNumber;
+    char passengerName[MAX_NAME_LENGTH];
+    int isBooked;
+    char classType[20]; // Class type: General, AC, Sleeper, etc.
+} Seat;
+
+// Structure for a train
+typedef struct {
+    int trainNumber;
+    char trainName[MAX_NAME_LENGTH];
+    char departureTime[10];
+    Seat seats[MAX_SEATS];
+} Train;
+
+// Queue to manage available seats
+typedef struct {
+    int front, rear;
+    int size;
+    int capacity;
+    int* array;
+} Queue;
+
+// Function to create a queue
+Queue* createQueue(int capacity) {
+    Queue* queue = (Queue*)malloc(sizeof(Queue));
+    queue->capacity = capacity;
+    queue->front = queue->size = 0;
+    queue->rear = capacity - 1;
+    queue->array = (int*)malloc(queue->capacity * sizeof(int));
+    return queue;
+}
+
+// Function to check if the queue is full
+int isFull(Queue* queue) {
+    return (queue->size == queue->capacity);
+}
+
+// Function to check if the queue is empty
+int isEmpty(Queue* queue) {
+    return (queue->size == 0);
+}
+
+// Function to add an item to the queue
+void enqueue(Queue* queue, int item) {
+    if (isFull(queue)) {
+        printf("Queue is full. Cannot add more seats.\n");
+        return;
+    }
+    queue->rear = (queue->rear + 1) % queue->capacity;
+    queue->array[queue->rear] = item;
+    queue->size++;
+}
+
+// Function to remove an item from the queue
+int dequeue(Queue* queue) {
+    if (isEmpty(queue)) {
+        printf("Queue is empty. No seats available.\n");
+        return -1;
+    }
+    int item = queue->array[queue->front];
+    queue->front = (queue->front + 1) % queue->capacity;
+    queue->size--;
+    return item;
+}
+
+// Function to initialize seats in a train
+void initializeSeats(Train* train) {
+    for (int i = 0; i < MAX_SEATS; i++) {
+        train->seats[i].seatNumber = i + 1;
+        train->seats[i].isBooked = 0;
+        strcpy(train->seats[i].passengerName, "");
+        if (i < 20) strcpy(train->seats[i].classType, "General");
+        else if (i < 40) strcpy(train->seats[i].classType, "AC");
+        else strcpy(train->seats[i].classType, "Sleeper");
+    }
+}
+
+// Function to display available seats
+void displayAvailableSeats(Train* train) {
+    printf("Available Seats:\n");
+    printf("Seat Number\tClass\n");
+    for (int i = 0; i < MAX_SEATS; i++) {
+        if (!train->seats[i].isBooked) {
+            printf("%d\t\t%s\n", train->seats[i].seatNumber, train->seats[i].classType);
+        }
+    }
+}
+
+// Function to book a seat
+void bookSeat(Train* train, Queue* queue) {
+    int seatNum;
+    char name[MAX_NAME_LENGTH];
+
+    if (isEmpty(queue)) {
+        printf("No seats available.\n");
+        return;
+    }
+
+    seatNum = dequeue(queue);
+    printf("Enter passenger name: ");
+    scanf("%s", name);
+
+    train->seats[seatNum - 1].isBooked = 1;
+    strcpy(train->seats[seatNum - 1].passengerName, name);
+    printf("Seat %d booked successfully for %s.\n", seatNum, name);
+}
+
+// Function to cancel a seat
+void cancelSeat(Train* train, Queue* queue) {
+    int seatNum;
+
+    printf("Enter seat number to cancel (1-%d): ", MAX_SEATS);
+    scanf("%d", &seatNum);
+
+    if (seatNum < 1 || seatNum > MAX_SEATS) {
+        printf("Invalid seat number.\n");
+        return;
+    }
+
+    if (!train->seats[seatNum - 1].isBooked) {
+        printf("Seat is not booked.\n");
+    } else {
+        train->seats[seatNum - 1].isBooked = 0;
+        strcpy(train->seats[seatNum - 1].passengerName, "");
+        enqueue(queue, seatNum);
+        printf("Booking for seat %d canceled successfully.\n", seatNum);
+    }
+}
+
+// Function to search for available seats by class
+void searchByClass(Train* train, char* classType) {
+    printf("Available Seats in %s Class:\n", classType);
+    printf("Seat Number\n");
+    for (int i = 0; i < MAX_SEATS; i++) {
+        if (!train->seats[i].isBooked && strcmp(train->seats[i].classType, classType) == 0) {
+            printf("%d\n", train->seats[i].seatNumber);
+        }
+    }
+}
+
+// Function to display train schedule
+void displaySchedule(Train* train) {
+    printf("Train Number: %d\n", train->trainNumber);
+    printf("Train Name: %s\n", train->trainName);
+    printf("Departure Time: %s\n", train->departureTime);
+}
+
+// Function to generate a booking report
+void generateBookingReport(Train* train) {
+    printf("Booking Report:\n");
+    printf("Seat Number\tPassenger Name\tClass\n");
+    for (int i = 0; i < MAX_SEATS; i++) {
+        if (train->seats[i].isBooked) {
+            printf("%d\t\t%s\t\t%s\n", train->seats[i].seatNumber, train->seats[i].passengerName, train->seats[i].classType);
+        }
+    }
+}
+
+int main() {
+    Train train;
+    Queue* queue = createQueue(MAX_SEATS);
+
+    // Initialize train details
+    train.trainNumber = 12345;
+    strcpy(train.trainName, "Express Train");
+    strcpy(train.departureTime, "10:00 AM");
+
+    // Initialize seats and queue
+    initializeSeats(&train);
+    for (int i = 0; i < MAX_SEATS; i++) {
+        enqueue(queue, train.seats[i].seatNumber);
+    }
+
+    int choice;
+    char classType[20];
+
+    while (1) {
+        printf("\nTrain Ticket Reservation System\n");
+        printf("1. Display Available Seats\n");
+        printf("2. Book a Seat\n");
+        printf("3. Cancel Booking\n");
+        printf("4. Search by Class\n");
+        printf("5. Display Train Schedule\n");
+        printf("6. Generate Booking Report\n");
+        printf("7. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                displayAvailableSeats(&train);
+                break;
+            case 2:
+                bookSeat(&train, queue);
+                break;
+            case 3:
+                cancelSeat(&train, queue);
+                break;
+            case 4:
+                printf("Enter class type (General/AC/Sleeper): ");
+                scanf("%s", classType);
+                searchByClass(&train, classType);
+                break;
+            case 5:
+                displaySchedule(&train);
+                break;
+            case 6:
+                generateBookingReport(&train);
+                break;
+            case 7:
+                exit(0);
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+
+    return 0;
+}
