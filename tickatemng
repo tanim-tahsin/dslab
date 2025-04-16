@@ -21,57 +21,6 @@ typedef struct {
     Seat seats[MAX_SEATS];
 } Train;
 
-// Queue to manage available seats
-typedef struct {
-    int front, rear;
-    int size;
-    int capacity;
-    int* array;
-} Queue;
-
-// Function to create a queue
-Queue* createQueue(int capacity) {
-    Queue* queue = (Queue*)malloc(sizeof(Queue));
-    queue->capacity = capacity;
-    queue->front = queue->size = 0;
-    queue->rear = capacity - 1;
-    queue->array = (int*)malloc(queue->capacity * sizeof(int));
-    return queue;
-}
-
-// Function to check if the queue is full
-int isFull(Queue* queue) {
-    return (queue->size == queue->capacity);
-}
-
-// Function to check if the queue is empty
-int isEmpty(Queue* queue) {
-    return (queue->size == 0);
-}
-
-// Function to add an item to the queue
-void enqueue(Queue* queue, int item) {
-    if (isFull(queue)) {
-        printf("Queue is full. Cannot add more seats.\n");
-        return;
-    }
-    queue->rear = (queue->rear + 1) % queue->capacity;
-    queue->array[queue->rear] = item;
-    queue->size++;
-}
-
-// Function to remove an item from the queue
-int dequeue(Queue* queue) {
-    if (isEmpty(queue)) {
-        printf("Queue is empty. No seats available.\n");
-        return -1;
-    }
-    int item = queue->array[queue->front];
-    queue->front = (queue->front + 1) % queue->capacity;
-    queue->size--;
-    return item;
-}
-
 // Function to initialize seats in a train
 void initializeSeats(Train* train) {
     for (int i = 0; i < MAX_SEATS; i++) {
@@ -96,16 +45,23 @@ void displayAvailableSeats(Train* train) {
 }
 
 // Function to book a seat
-void bookSeat(Train* train, Queue* queue) {
+void bookSeat(Train* train) {
     int seatNum;
     char name[MAX_NAME_LENGTH];
 
-    if (isEmpty(queue)) {
-        printf("No seats available.\n");
+    printf("Enter seat number to book (1-%d): ", MAX_SEATS);
+    scanf("%d", &seatNum);
+
+    if (seatNum < 1 || seatNum > MAX_SEATS) {
+        printf("Invalid seat number.\n");
         return;
     }
 
-    seatNum = dequeue(queue);
+    if (train->seats[seatNum - 1].isBooked) {
+        printf("Seat %d is already booked.\n", seatNum);
+        return;
+    }
+
     printf("Enter passenger name: ");
     scanf("%s", name);
 
@@ -115,7 +71,7 @@ void bookSeat(Train* train, Queue* queue) {
 }
 
 // Function to cancel a seat
-void cancelSeat(Train* train, Queue* queue) {
+void cancelSeat(Train* train) {
     int seatNum;
 
     printf("Enter seat number to cancel (1-%d): ", MAX_SEATS);
@@ -127,13 +83,13 @@ void cancelSeat(Train* train, Queue* queue) {
     }
 
     if (!train->seats[seatNum - 1].isBooked) {
-        printf("Seat is not booked.\n");
-    } else {
-        train->seats[seatNum - 1].isBooked = 0;
-        strcpy(train->seats[seatNum - 1].passengerName, "");
-        enqueue(queue, seatNum);
-        printf("Booking for seat %d canceled successfully.\n", seatNum);
+        printf("Seat %d is not booked.\n", seatNum);
+        return;
     }
+
+    train->seats[seatNum - 1].isBooked = 0;
+    strcpy(train->seats[seatNum - 1].passengerName, "");
+    printf("Booking for seat %d canceled successfully.\n", seatNum);
 }
 
 // Function to search for available seats by class
@@ -167,18 +123,14 @@ void generateBookingReport(Train* train) {
 
 int main() {
     Train train;
-    Queue* queue = createQueue(MAX_SEATS);
 
     // Initialize train details
     train.trainNumber = 12345;
     strcpy(train.trainName, "Express Train");
     strcpy(train.departureTime, "10:00 AM");
 
-    // Initialize seats and queue
+    // Initialize seats
     initializeSeats(&train);
-    for (int i = 0; i < MAX_SEATS; i++) {
-        enqueue(queue, train.seats[i].seatNumber);
-    }
 
     int choice;
     char classType[20];
@@ -200,10 +152,10 @@ int main() {
                 displayAvailableSeats(&train);
                 break;
             case 2:
-                bookSeat(&train, queue);
+                bookSeat(&train);
                 break;
             case 3:
-                cancelSeat(&train, queue);
+                cancelSeat(&train);
                 break;
             case 4:
                 printf("Enter class type (General/AC/Sleeper): ");
@@ -225,3 +177,4 @@ int main() {
 
     return 0;
 }
+
